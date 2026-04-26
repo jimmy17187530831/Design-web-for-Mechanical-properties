@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mechanical Properties Finder</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: rgba(15, 23, 42, 0.88);
+      --panel: rgba(30, 41, 59, 0.88);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #a78bfa;
+      --line: rgba(148, 163, 184, 0.25);
+      --good: #34d399;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.25), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(167, 139, 250, 0.22), transparent 34rem),
+        var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .app {
+      width: min(960px, 100%);
+      text-align: center;
+    }
+
+    .hero {
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 3rem 2rem;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(18px);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 4.5rem);
+      line-height: 1;
+      margin: 0 0 1rem;
+      letter-spacing: -0.05em;
+    }
+
+    .subtitle {
+      max-width: 680px;
+      margin: 0 auto 2rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .search-box {
+      width: min(640px, 100%);
+      margin: 0 auto;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      background: rgba(2, 6, 23, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 999px;
+      padding: 0.8rem 1rem 0.8rem 1.25rem;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    .search-box span { color: var(--accent); font-size: 1.4rem; }
+
+    input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 1.1rem;
+      min-width: 0;
+    }
+
+    input::placeholder { color: #64748b; }
+
+    .hint {
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .chips {
+      margin-top: 1.4rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      color: #cbd5e1;
+      background: rgba(30, 41, 59, 0.62);
+      border-radius: 999px;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      z-index: 20;
+    }
+
+    .overlay.active { display: flex; }
+
+    .modal {
+      width: min(820px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      background: var(--card);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 26px;
+      padding: 1.5rem;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(20px);
+      animation: pop 0.2s ease-out;
+      text-align: left;
+    }
+
+    @keyframes pop {
+      from { transform: scale(0.96) translateY(8px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .modal-title h2 {
+      margin: 0;
+      font-size: 1.7rem;
+    }
+
+    .modal-title p {
+      margin: 0.4rem 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .close {
+      border: none;
+      width: 2.3rem;
+      height: 2.3rem;
+      border-radius: 50%;
+      cursor: pointer;
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text);
+      font-size: 1.35rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .property-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 1rem;
+    }
+
+    .property-card .label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .property-card .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 16px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      color: #cdefff;
+      line-height: 1.6;
+    }
+
+    .curve-wrap {
+      background: rgba(2, 6, 23, 0.55);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 1rem;
+      overflow: auto;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 560px;
+      height: 420px;
+      display: block;
+    }
+
+    .axis, .gridline { stroke: rgba(226, 232, 240, 0.35); stroke-width: 1; }
+    .gridline { stroke-dasharray: 4 7; opacity: 0.7; }
+    .curve { fill: none; stroke: url(#curveGradient); stroke-width: 4; stroke-linecap: round; }
+    .marker { fill: var(--good); }
+    .labelText { fill: #cbd5e1; font-size: 13px; }
+    .smallText { fill: #94a3b8; font-size: 12px; }
+
+    .footer-tip {
+      margin-top: 1rem;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 680px) {
+      body { padding: 1rem; }
+      .hero { padding: 2rem 1rem; }
+      .grid { grid-template-columns: 1fr; }
+      .modal { padding: 1rem; }
+      .modal-header { align-items: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <h1>Mechanical Properties Finder</h1>
+      <p class="subtitle">
+        Type a material name, including pure elements, compounds, or alloys. Press Enter once for key mechanical properties, then press Enter again for an estimated stress–strain curve.
+      </p>
+
+      <div class="search-box">
+        <span>⌕</span>
+        <input id="materialInput" type="text" placeholder="Try: Steel, Aluminum, Titanium, Silicon Carbide, Brass..." autocomplete="off" autofocus />
+      </div>
+
+      <div class="hint">Keyboard flow: Enter → properties pop-up; Enter again → curve pop-up; Esc → close.</div>
+
+      <div class="chips" id="chips"></div>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" id="modal"></div>
+  </div>
+
+  <script>
+    const materialDB = {
+      "steel": {
+        name: "Steel",
+        type: "Alloy",
+        fractureToughness: "50–150 MPa√m",
+        tensileStrength: "400–1200 MPa",
+        youngModulus: "190–210 GPa",
+        poisson: "0.27–0.30",
+        E: 200, yield: 350, uts: 650, fractureStrain: 0.24, ductility: "ductile"
+      },
+      "stainless steel": {
+        name: "Stainless Steel",
+        type: "Alloy",
+        fractureToughness: "100–220 MPa√m",
+        tensileStrength: "515–860 MPa",
+        youngModulus: "190–200 GPa",
+        poisson: "0.27–0.30",
+        E: 193, yield: 215, uts: 620, fractureStrain: 0.45, ductility: "ductile"
+      },
+      "aluminum": {
+        name: "Aluminum",
+        type: "Pure element / alloy family",
+        fractureToughness: "20–40 MPa√m",
+        tensileStrength: "90–570 MPa",
+        youngModulus: "68–72 GPa",
+        poisson: "0.32–0.35",
+        E: 69, yield: 95, uts: 250, fractureStrain: 0.18, ductility: "ductile"
+      },
+      "aluminium": null,
+      "titanium": {
+        name: "Titanium",
+        type: "Pure element / alloy family",
+        fractureToughness: "45–75 MPa√m",
+        tensileStrength: "240–950 MPa",
+        youngModulus: "105–120 GPa",
+        poisson: "0.30–0.36",
+        E: 110, yield: 275, uts: 440, fractureStrain: 0.16, ductility: "ductile"
+      },
+      "copper": {
+        name: "Copper",
+        type: "Pure element",
+        fractureToughness: "40–100 MPa√m",
+        tensileStrength: "200–400 MPa",
+        youngModulus: "110–130 GPa",
+        poisson: "0.33–0.35",
+        E: 117, yield: 70, uts: 250, fractureStrain: 0.30, ductility: "ductile"
+      },
+      "brass": {
+        name: "Brass",
+        type: "Copper-zinc alloy",
+        fractureToughness: "30–90 MPa√m",
+        tensileStrength: "300–700 MPa",
+        youngModulus: "95–110 GPa",
+        poisson: "0.33–0.36",
+        E: 100, yield: 150, uts: 450, fractureStrain: 0.28, ductility: "ductile"
+      },
+      "bronze": {
+        name: "Bronze",
+        type: "Copper-tin alloy family",
+        fractureToughness: "25–75 MPa√m",
+        tensileStrength: "350–800 MPa",
+        youngModulus: "95–120 GPa",
+        poisson: "0.32–0.35",
+        E: 110, yield: 180, uts: 520, fractureStrain: 0.18, ductility: "ductile"
+      },
+      "magnesium": {
+        name: "Magnesium",
+        type: "Pure element / alloy family",
+        fractureToughness: "10–25 MPa√m",
+        tensileStrength: "150–350 MPa",
+        youngModulus: "41–45 GPa",
+        poisson: "0.27–0.31",
+        E: 45, yield: 90, uts: 220, fractureStrain: 0.12, ductility: "semi-ductile"
+      },
+      "nickel": {
+        name: "Nickel",
+        type: "Pure element",
+        fractureToughness: "80–160 MPa√m",
+        tensileStrength: "350–900 MPa",
+        youngModulus: "190–220 GPa",
+        poisson: "0.29–0.32",
+        E: 200, yield: 140, uts: 460, fractureStrain: 0.35, ductility: "ductile"
+      },
+      "silicon carbide": {
+        name: "Silicon Carbide",
+        type: "Ceramic compound",
+        fractureToughness: "3–5 MPa√m",
+        tensileStrength: "150–400 MPa",
+        youngModulus: "380–450 GPa",
+        poisson: "0.14–0.21",
+        E: 410, yield: null, uts: 320, fractureStrain: 0.0008, ductility: "brittle"
+      },
+      "alumina": {
+        name: "Alumina / Aluminum Oxide",
+        type: "Ceramic compound",
+        fractureToughness: "3–6 MPa√m",
+        tensileStrength: "200–400 MPa",
+        youngModulus: "300–390 GPa",
+        poisson: "0.21–0.24",
+        E: 370, yield: null, uts: 300, fractureStrain: 0.0009, ductility: "brittle"
+      },
+      "aluminum oxide": null,
+      "glass": {
+        name: "Soda-Lime Glass",
+        type: "Amorphous ceramic",
+        fractureToughness: "0.7–1.0 MPa√m",
+        tensileStrength: "30–100 MPa",
+        youngModulus: "65–75 GPa",
+        poisson: "0.20–0.25",
+        E: 70, yield: null, uts: 60, fractureStrain: 0.0009, ductility: "brittle"
+      },
+      "concrete": {
+        name: "Concrete",
+        type: "Composite material",
+        fractureToughness: "0.2–1.4 MPa√m",
+        tensileStrength: "2–5 MPa",
+        youngModulus: "20–40 GPa",
+        poisson: "0.15–0.22",
+        E: 30, yield: null, uts: 4, fractureStrain: 0.00015, ductility: "brittle"
+      },
+      "carbon fiber": {
+        name: "Carbon Fiber Composite",
+        type: "Composite material",
+        fractureToughness: "20–60 MPa√m, direction-dependent",
+        tensileStrength: "600–3500 MPa",
+        youngModulus: "70–300 GPa, direction-dependent",
+        poisson: "0.20–0.35",
+        E: 150, yield: null, uts: 1200, fractureStrain: 0.008, ductility: "brittle-linear"
+      },
+      "polycarbonate": {
+        name: "Polycarbonate",
+        type: "Polymer",
+        fractureToughness: "2–4 MPa√m",
+        tensileStrength: "55–75 MPa",
+        youngModulus: "2.0–2.6 GPa",
+        poisson: "0.37–0.40",
+        E: 2.4, yield: 60, uts: 70, fractureStrain: 0.80, ductility: "polymer"
+      },
+      "nylon": {
+        name: "Nylon",
+        type: "Polymer",
+        fractureToughness: "2–5 MPa√m",
+        tensileStrength: "50–100 MPa",
+        youngModulus: "1.5–3.5 GPa",
+        poisson: "0.35–0.42",
+        E: 2.5, yield: 55, uts: 80, fractureStrain: 0.55, ductility: "polymer"
+      }
+    };
+
+    materialDB["aluminium"] = materialDB["aluminum"];
+    materialDB["aluminum oxide"] = materialDB["alumina"];
+
+    const input = document.getElementById("materialInput");
+    const overlay = document.getElementById("overlay");
+    const modal = document.getElementById("modal");
+    const chips = document.getElementById("chips");
+
+    let currentMaterial = null;
+    let modalStage = 0;
+
+    ["Steel", "Aluminum", "Titanium", "Silicon Carbide", "Brass", "Polycarbonate"].forEach(name => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.textContent = name;
+      chip.addEventListener("click", () => {
+        input.value = name;
+        showProperties();
+      });
+      chips.appendChild(chip);
+    });
+
+    function normalize(name) {
+      return name.trim().toLowerCase().replace(/[\-_]/g, " ").replace(/\s+/g, " ");
+    }
+
+    function getMaterial(name) {
+      const key = normalize(name);
+      if (materialDB[key]) return materialDB[key];
+
+      return {
+        name: name.trim() || "Unknown material",
+        type: "Not in local database",
+        fractureToughness: "No database value; depends strongly on grade and processing",
+        tensileStrength: "No database value; use datasheet or MatWeb/ASM source",
+        youngModulus: "No database value; curve uses generic estimate",
+        poisson: "Often 0.20–0.35 for many solids, but verify by material class",
+        E: 100, yield: 200, uts: 350, fractureStrain: 0.08, ductility: "estimated",
+        estimated: true
+      };
+    }
+
+    function showProperties() {
+      const materialName = input.value.trim();
+      if (!materialName) return;
+      currentMaterial = getMaterial(materialName);
+      modalStage = 1;
+      overlay.classList.add("active");
+      overlay.setAttribute("aria-hidden", "false");
+      modal.innerHTML = propertiesHTML(currentMaterial);
+    }
+
+    function propertiesHTML(m) {
+      return `
+        <div class="modal-header">
+          <div class="modal-title">
+            <h2>${escapeHTML(m.name)}</h2>
+            <p>${escapeHTML(m.type)}${m.estimated ? " · estimated placeholder" : ""}</p>
+          </div>
+          <button class="close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+
+        <div class="grid">
+          ${propertyCard("Fracture Toughness", m.fractureToughness)}
+          ${propertyCard("Tensile Strength", m.tensileStrength)}
+          ${propertyCard("Young’s Modulus", m.youngModulus)}
+          ${propertyCard("Poisson’s Ratio", m.poisson)}
+        </div>
+
+        <div class="note">
+          Press <strong>Enter</strong> again to replace this pop-up with an estimated engineering stress–strain curve. Values are representative ranges only; actual values vary with grade, heat treatment, porosity, temperature, loading rate, and test direction.
+        </div>
+      `;
+    }
+
+    function propertyCard(label, value) {
+      return `
+        <article class="property-card">
+          <div class="label">${label}</div>
+          <div class="value">${escapeHTML(value)}</div>
+        </article>
+      `;
+    }
+
+    function showCurve() {
+      if (!currentMaterial) return;
+      modalStage = 2;
+      modal.innerHTML = curveHTML(currentMaterial);
+    }
+
+    function curveHTML(m) {
+      const curve = buildCurve(m);
+      return `
+        <div class="modal-header">
+          <div class="modal-title">
+            <h2>${escapeHTML(m.name)} Stress–Strain Curve</h2>
+            <p>Estimated engineering stress–strain behavior. Shape changes depending on ductile, brittle, or polymer-like behavior.</p>
+          </div>
+          <button class="close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+        <div class="curve-wrap">
+          ${curve}
+        </div>
+        <div class="footer-tip">Press Enter to return to the property pop-up, or Esc to close.</div>
+      `;
+    }
+
+    function buildCurve(m) {
+      const width = 720, height = 390;
+      const padL = 72, padB = 58, padT = 24, padR = 28;
+      const plotW = width - padL - padR;
+      const plotH = height - padT - padB;
+      const maxStrain = Math.max(m.fractureStrain * 1.1, m.ductility.includes("brittle") ? 0.012 : 0.1);
+      const maxStress = Math.max(m.uts * 1.2, 10);
+      const x = s => padL + (s / maxStrain) * plotW;
+      const y = stress => padT + plotH - (stress / maxStress) * plotH;
+
+      let points = [];
+      if (m.ductility.includes("brittle")) {
+        points = [[0, 0], [m.fractureStrain, m.uts]];
+      } else if (m.ductility === "polymer") {
+        points = [
+          [0, 0],
+          [0.02, m.yield * 0.82],
+          [0.06, m.yield],
+          [m.fractureStrain * 0.45, m.uts * 0.92],
+          [m.fractureStrain, m.uts]
+        ];
+      } else {
+        const yieldStrain = (m.yield || m.uts * 0.55) / (m.E * 1000);
+        points = [
+          [0, 0],
+          [yieldStrain, m.yield || m.uts * 0.55],
+          [m.fractureStrain * 0.35, m.uts],
+          [m.fractureStrain, m.uts * 0.78]
+        ];
+      }
+
+      const path = points.map((p, i) => `${i === 0 ? "M" : "L"} ${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(" ");
+      const xTicks = 5;
+      const yTicks = 5;
+      let grid = "";
+      for (let i = 0; i <= xTicks; i++) {
+        const strain = maxStrain * i / xTicks;
+        grid += `<line class="gridline" x1="${x(strain)}" y1="${padT}" x2="${x(strain)}" y2="${height - padB}" />`;
+        grid += `<text class="smallText" x="${x(strain)}" y="${height - 30}" text-anchor="middle">${strain.toFixed(maxStrain < 0.02 ? 3 : 2)}</text>`;
+      }
+      for (let i = 0; i <= yTicks; i++) {
+        const stress = maxStress * i / yTicks;
+        grid += `<line class="gridline" x1="${padL}" y1="${y(stress)}" x2="${width - padR}" y2="${y(stress)}" />`;
+        grid += `<text class="smallText" x="${padL - 10}" y="${y(stress) + 4}" text-anchor="end">${stress.toFixed(0)}</text>`;
+      }
+
+      const last = points[points.length - 1];
+      return `
+        <svg viewBox="0 0 ${width} ${height}" aria-label="Stress strain curve">
+          <defs>
+            <linearGradient id="curveGradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#38bdf8" />
+              <stop offset="100%" stop-color="#a78bfa" />
+            </linearGradient>
+          </defs>
+          ${grid}
+          <line class="axis" x1="${padL}" y1="${height - padB}" x2="${width - padR}" y2="${height - padB}" />
+          <line class="axis" x1="${padL}" y1="${padT}" x2="${padL}" y2="${height - padB}" />
+          <path class="curve" d="${path}" />
+          <circle class="marker" cx="${x(last[0])}" cy="${y(last[1])}" r="5" />
+          <text class="labelText" x="${width / 2}" y="${height - 6}" text-anchor="middle">Engineering Strain</text>
+          <text class="labelText" transform="translate(18 ${height / 2}) rotate(-90)" text-anchor="middle">Engineering Stress, MPa</text>
+          <text class="labelText" x="${x(last[0]) - 8}" y="${y(last[1]) - 14}" text-anchor="end">fracture / final point</text>
+        </svg>
+      `;
+    }
+
+    function closeModal() {
+      overlay.classList.remove("active");
+      overlay.setAttribute("aria-hidden", "true");
+      modalStage = 0;
+      currentMaterial = null;
+      input.focus();
+    }
+
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>'"]/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+      }[char]));
+    }
+
+    input.addEventListener("keydown", event => {
+      if (event.key !== "Enter") return;
+
+      // If a pop-up is already open, do not restart the search from the input box.
+      // Let the global keyboard handler switch between properties and curve instead.
+      if (overlay.classList.contains("active")) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      showProperties();
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && overlay.classList.contains("active")) {
+        event.preventDefault();
+        closeModal();
+        return;
+      }
+
+      if (event.key === "Enter" && overlay.classList.contains("active")) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (modalStage === 1) {
+          showCurve();
+        } else if (modalStage === 2) {
+          modalStage = 1;
+          modal.innerHTML = propertiesHTML(currentMaterial);
+        }
+      }
+    });
+
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) closeModal();
+    });
+  </script>
+</body>
+</html>
